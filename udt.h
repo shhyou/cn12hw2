@@ -15,6 +15,7 @@ struct channel_t {
     void close();
 };
 
-channel_t udt_new(unsigned short port = 0);
+/* 0 is for receiving. channel_t::recv should fill the src ip */
+channel_t udt_new(unsigned short port, unsigned int ip = 0);
 
 #endif

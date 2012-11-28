@@ -37,10 +37,9 @@ static unsigned int crc32(void* data, size_t len) {
     return crc;
 }
 
-static pkg_t *mkpkt(unsigned short seq, void* data, size_t len) {
-    pkg_t *p;
+/* *p should be at least 256 bytes long */
+static pkg_t *mkpkt(pkg_t *p, unsigned short seq, void* data, size_t len) {
     assert(0<len && len+sizeof(pkg_t)-1<=256);
-    p = (pkg_t*)malloc(len + sizeof(pkg_t) - 1);
     p->len = len + sizeof(pkg_t) - 1;
     p->seq = seq;
     p->crc = 0;
@@ -49,7 +48,7 @@ static pkg_t *mkpkt(unsigned short seq, void* data, size_t len) {
     return p;
 }
 
-static bool unpkt(unsigned short &seq, void* data, size_t len, pkg_t *p) {
+static bool unpkt(pkg_t *p, unsigned short &seq, void* data, size_t len) {
     int rcv_crc = p->crc;
     p->crc = 0;
     if (crc32(p, p->len) != rcv_crc)
