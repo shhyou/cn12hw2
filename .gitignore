@@ -2,3 +2,5 @@
 #*#
 .#README.md
 UDPProxy*
+test_udt/server
+test_udt/client
