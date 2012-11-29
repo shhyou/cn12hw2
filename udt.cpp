@@ -1,18 +1,20 @@
+#include "udt.h"
+
+#include <cstdio>
 #include <cstring>
 #include <cstdarg>
 #include <unistd.h>
+#include <errno.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 
-#include "udt.h"
-
 char* error_message(const char *format, ...) {
-    char buffer[1024];
+    char* buffer = new char[1024];
     va_list args;
-    va_start(args);
+    va_start(args, format);
     vsprintf(buffer, format, args);
     va_end(args);
     sprintf(buffer + strlen(buffer), ": %s", strerror(errno));
@@ -20,9 +22,9 @@ char* error_message(const char *format, ...) {
 }
 
 char* herror_message(const char *format, ...) {
-    char buffer[1024];
+    char* buffer = new char[1024];
     va_list args;
-    va_start(args);
+    va_start(args, format);
     vsprintf(buffer, format, args);
     va_end(args);
     sprintf(buffer + strlen(buffer), ": %s", hstrerror(h_errno));
@@ -30,29 +32,34 @@ char* herror_message(const char *format, ...) {
 }
 
 channel_t::channel_t() {
+    this->fd = -1;
 }
 
 channel_t::~channel_t() {
     this->close();
 }
 
-size_t send(void* buf, size_t len) {
-    size_t ret = sendto(this->fd, buf, len, 0 (sockaddr*) &this->dest, sizeof(this->dest));
+ssize_t channel_t::send(void* buf, size_t len) {
+    ssize_t ret = sendto(this->fd, buf, len, 0, (sockaddr*) &this->dest, sizeof(this->dest));
     if (ret < 0)
         throw error_message("failed to send UDP package");
     return ret;
 }
 
-size_t recv(void* buf, size_t maxlen) {
-    size_t ret = recvfrom(this->fd, biuf, maxlen, 0, (sockaddr*) &this->dest, sizeof(this->dest));
+ssize_t channel_t::recv(void* buf, size_t maxlen) {
+    socklen_t len = sizeof(this->dest);
+    ssize_t ret = recvfrom(this->fd, buf, maxlen, 0, (sockaddr*) &this->dest, &len);
+
     if (ret < 0)
         throw error_message("failed to receive UDP package");
     return ret;
 }
 
 void channel_t::close() {
-    if (close(this->fd) != 0)
+    if (this->fd != -1 && ::close(this->fd) != 0)
         perror("failed to close channel");
+    else
+        this->fd = -1;
 }
 
 channel_t udt_new(unsigned short port, const char *addr) {
@@ -65,7 +72,7 @@ channel_t udt_new(unsigned short port, const char *addr) {
     if (addr == NULL) {
         
         cnl.dest.sin_addr.s_addr = htonl(INADDR_ANY);
-        if (bind(fd, (sockaddr*) &cnl.dest, sizeof(cnl.dest)) != 0)
+        if (bind(cnl.fd, (sockaddr*) &cnl.dest, sizeof(cnl.dest)) != 0)
             throw error_message("binding error in udt_new");
         
     } else {
