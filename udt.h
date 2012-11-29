@@ -19,6 +19,6 @@ struct channel_t {
 
 /* NULL is for receiving. channel_t::recv should fill the src ip */
 /* throws strings (char*) on error */
-channel_t udt_new(unsigned short port, const char *addr);
+channel_t udt_new(unsigned short port, const char *addr = NULL);
 
 #endif

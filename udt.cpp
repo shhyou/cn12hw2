@@ -36,7 +36,6 @@ channel_t::channel_t() {
 }
 
 channel_t::~channel_t() {
-    this->close();
 }
 
 ssize_t channel_t::send(void* buf, size_t len) {
