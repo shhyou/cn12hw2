@@ -10,7 +10,7 @@ Hello
 
 udt new:
      create SOCK_DGRAM socket
-	 bind if port ip is 0 (for receiving)
+	 bind if port addr is NULL (for receiving)
 	 otherwise no bind port
 
 udt recv:
