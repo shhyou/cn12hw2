@@ -37,13 +37,17 @@ channel_t::~channel_t() {
 }
 
 size_t send(void* buf, size_t len) {
-    if (sendto(this->fd, buf, len, 0 (sockaddr*) &this->dest, sizeof(this->dest)) != 0)
+    size_t ret = sendto(this->fd, buf, len, 0 (sockaddr*) &this->dest, sizeof(this->dest));
+    if (ret < 0)
         throw error_message("failed to send UDP package");
+    return ret;
 }
 
 size_t recv(void* buf, size_t maxlen) {
-    if (recvfrom(this->fd, biuf, maxlen, 0, (sockaddr*) &this->dest, sizeof(this->dest)) != 0)
+    size_t ret = recvfrom(this->fd, biuf, maxlen, 0, (sockaddr*) &this->dest, sizeof(this->dest));
+    if (ret < 0)
         throw error_message("failed to receive UDP package");
+    return ret;
 }
 
 void channel_t::close() {

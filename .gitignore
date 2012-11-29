@@ -1,3 +1,5 @@
 *.swp
 #*#
 .#README.md
+test2/*
+.gitignore
