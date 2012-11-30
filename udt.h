@@ -3,11 +3,14 @@
 #ifndef _UDT_H
 #define _UDT_H
 
+#include <stdio.h> // for NULL
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 
 struct channel_t {
     int fd;
+    timeval timeout;
     channel_t();
     ~channel_t();
     sockaddr_in dest;

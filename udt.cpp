@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 
 char* error_message(const char *format, ...) {
@@ -33,6 +34,8 @@ char* herror_message(const char *format, ...) {
 
 channel_t::channel_t() {
     this->fd = -1;
+    this->timeout.tv_sec = 0;
+    this->timeout.tv_usec = 500 * 1000;
 }
 
 channel_t::~channel_t() {
@@ -46,11 +49,25 @@ ssize_t channel_t::send(void* buf, size_t len) {
 }
 
 ssize_t channel_t::recv(void* buf, size_t maxlen) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(this->fd, &readfds);
+    
+    timeval ltimeout = this->timeout;
+
+    int srep = select(this->fd + 1, &readfds, NULL, NULL, &ltimeout);
+
+    if (srep == 0) // timeout
+        return 0;
+    else if (srep < 0)
+        throw error_message("select failed");
+    
     socklen_t len = sizeof(this->dest);
     ssize_t ret = recvfrom(this->fd, buf, maxlen, 0, (sockaddr*) &this->dest, &len);
 
     if (ret < 0)
         throw error_message("failed to receive UDP package");
+        
     return ret;
 }
 
