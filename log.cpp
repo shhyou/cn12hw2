@@ -25,7 +25,7 @@ string stktrace() {
 string strerrmsg(const char *fmt, va_list args, const char *err_str) {
 	static char buf[4096];
 	vsprintf(buf, fmt, args);
-	return stktrace() + ": " + buf + ": " + err_str;
+	return stktrace() + ": " + buf + " (" + err_str + ")";
 }
 
 logprint_t::logprint_t(const char *_type, FILE *_output) : type(_type), output(_output) {}

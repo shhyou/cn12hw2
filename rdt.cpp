@@ -76,7 +76,7 @@ size_t unpkt(pkt_t &p, unsigned int &seq, void* data, size_t pktlen) {
 	return len;
 }
 
-void snd(channel_t udt, void *data, size_t len) {
+void snd(channel_t udt, const void *data, size_t len) {
 	__log;
 
 	deque<pkt_t> window;

@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     try {
         subrout(18018, argc > 1 ? argv[1] : "127.0.0.1");
     } catch (const string& err) {
-        logger.eprint("Caught error '%s'\n", err.c_str());
+        logger.eprint("    %s\n", err.c_str());
     }
 	return 0;
 }

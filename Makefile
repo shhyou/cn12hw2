@@ -2,8 +2,8 @@ CXX       = g++
 CXXFLAGS  = -std=c++0x
 HEADERS   = udt.h rdt.h log.h
 OBJS      = udt.o rdt.o log.o
-#TARGET    = snd rcv
-TARGET    =
+TARGET    = snd rcv
+#TARGET    =
 
 .PHONY: all clean
 .SUFFIXES:
