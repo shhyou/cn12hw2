@@ -14,8 +14,8 @@ struct channel_t {
     channel_t();
     ~channel_t();
     sockaddr_in dest;
-    ssize_t send(void* buf, size_t len); /* may throw error */
-    ssize_t recv(void* buf, size_t maxlen); /* may throw error */
+    ssize_t send(void* buf, size_t len) const; /* may throw error (string)*/
+    ssize_t recv(void* buf, size_t maxlen); /* may throw error (string) */
     /* note that recv changes dest to the incomer's IP nomatter it succeesed or not*/
     void close();
 };

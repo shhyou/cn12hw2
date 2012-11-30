@@ -1,4 +1,5 @@
 *.swp
+*.o
 #*#
 .#README.md
 UDPProxy*

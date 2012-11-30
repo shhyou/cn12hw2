@@ -1,9 +1,16 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
+
+#include "../log.h"
 #include "../udt.h"
 
+using std::string;
+
 int main(int argc, char *argv[]) {
+	__log;
+
 	int listen_port = 18000;
 	if (argc >= 2) listen_port = atoi(argv[1]);
     channel_t cnl = udt_new(listen_port, NULL);
@@ -12,8 +19,8 @@ int main(int argc, char *argv[]) {
 	while (true) {
         try {
             jizz = cnl.recv(buf, 1808);
-        } catch (const char *err) {
-            puts(err); break;
+        } catch (const string& err) {
+            puts(err.c_str()); break;
         }
         if (jizz < 0) break;
         if (jizz == 0)
