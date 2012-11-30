@@ -15,9 +15,9 @@ const int N = 512;
 /* package processing; Need this be moved to another file? */
 struct __attribute__((packed)) pkt_t {
 	unsigned char len;
-	unsigned short seq; /* I have no idea how long this should be */
+	unsigned int seq; /* I have no idea how long this should be */
 	unsigned int crc;
-	unsigned char data[255 - 2 - 4];
+	unsigned char data[255 - 4 - 4];
 };
 
 unsigned int crc32(const void* data, size_t len) {
@@ -42,11 +42,11 @@ unsigned int crc32(const void* data, size_t len) {
 }
 
 /* for future extension ... using cyclic codes perhaps */
-size_t mkpkt(pkt_t &p, unsigned short seq, void* data, size_t len) {
+size_t mkpkt(pkt_t &p, unsigned int seq, void* data, size_t len) {
 	assert(len != 0);
 	if (len > sizeof(p.data))
 		len = sizeof(p.data);
-	p.len = len + sizeof(unsigned short) + sizeof(unsigned int);
+	p.len = len + sizeof(unsigned int) + sizeof(unsigned int);
 	p.seq = seq;
 	p.crc = 0;
 	memcpy(p.data, data, len);
@@ -56,9 +56,9 @@ size_t mkpkt(pkt_t &p, unsigned short seq, void* data, size_t len) {
 }
 
 /* data is assumed to be as large as sizeof(p.data) */
-size_t unpkt(pkt_t &p, unsigned short &seq, void* data, size_t pktlen) {
+size_t unpkt(pkt_t &p, unsigned int &seq, void* data, size_t pktlen) {
 	int rcv_crc = p.crc;
-	ssize_t len = (ssize_t)p.len - sizeof(unsigned short) - sizeof(unsigned int);
+	ssize_t len = (ssize_t)p.len - sizeof(unsigned int) - sizeof(unsigned int);
 	if (p.len+1 != pktlen  ||   len <= 0)
 		throw "packet corrupt; incorrect length";
 	p.crc = 0;
@@ -74,7 +74,7 @@ void snd(channel_t udt, void *data, size_t len) {
 	deque<pkt_t> window;
 	unsigned char *buf = new unsigned char[len + 4];
 	size_t ptr = 0;
-	unsigned short base = 0, nxtseq = 0;
+	unsigned int base = 0, nxtseq = 0;
 
 	memcpy(buf, (unsigned int*)&len, 4);
 	memcpy(buf+4, data, len);
@@ -102,7 +102,7 @@ void snd(channel_t udt, void *data, size_t len) {
 		return true;
 	};
 
-	auto rdt_rcv_ok = [&window, &base](unsigned short seq) {
+	auto rdt_rcv_ok = [&window, &base](unsigned int seq) {
 		/* see if the ack is out of range */
 		/* that seq number is unsigned is essential here */
 		if (seq-base >= N)
@@ -132,7 +132,7 @@ void snd(channel_t udt, void *data, size_t len) {
 				continue;
 			}
 			try {
-				unsigned short seq = 0;
+				unsigned int seq = 0;
 				/* the content isn't really needed here... */
 				unpkt(pkt, seq, buf, pktlen);
 				/* returning false indicating stop_timer, i.e. can send new data */
