@@ -13,7 +13,7 @@
 #include "log.h"
 
 /* 240 is just a loose upper-bound, can change if needed */
-const unsigned int filename_ubound = 240;
+const unsigned int filename_ubound = 1024;
 
 void send_file(const char *address, const int port, const char *pathname) {
     __log;
@@ -35,18 +35,18 @@ void send_file(const char *address, const int port, const char *pathname) {
 
     size_t filename_len = strlen(filename) + 1;
     if (filename_len >= filename_ubound)
-        logger.print("Filename '%s' is too long, will be truncated to %d", filename, filename_ubound);
+        logger.print("Filename '%s' is too long, will be truncated.", filename, filename_ubound);
 
     snd(udt, filename, filename_len);
-    logger.print("Sent filename %s", filename);
+    logger.print("Filename sent.");
     
-    /* send filesize */
-    snd(udt, &st.st_size, sizeof(st.st_size));
-    logger.print("Sent filesize %d", st.st_size);
-
     /* send file protection */
     snd(udt, &st.st_mode, sizeof(st.st_mode));
-    logger.print("Sent fileprotection");
+    logger.print("File permission sent.");
+
+    /* send filesize */
+    snd(udt, &st.st_size, sizeof(st.st_size));
+    logger.print("%s's size is %d bytes.", filename, st.st_size);
 
     /* send filedata */
     void *file_content;
@@ -58,6 +58,7 @@ void send_file(const char *address, const int port, const char *pathname) {
     content_len = st.st_size;
 
     snd(udt, file_content, content_len);
+    logger.print("File content sent.");
 
     munmap(file_content, st.st_size);
     /* end sending file */

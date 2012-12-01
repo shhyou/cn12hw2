@@ -18,31 +18,33 @@ void receive_file(channel_t udt) {
     char *filename = (char*) rcv(udt, filename_len);
     if (filename_len <= 0)
         logger.raise("No filename received.");
-    logger.print("Got filename: %s", filename);
+    logger.print("Filename %s received.", filename);
 
     size_t dummy = sizeof(mode_t);
     mode_t *md = (mode_t*) rcv(udt, dummy);
     if (dummy != sizeof(mode_t))
         logger.raise("File permission size not valid.");
-    logger.print("Filemode received.");
+    logger.print("Filemode %d received.", (int) *md);
 
     dummy = sizeof(off_t);
     off_t *left_len = (off_t*) rcv(udt, dummy);
-    logger.print("Filesize = %d", (int) *left_len);
+    logger.print("The file's size is %d bytes.", (int) *left_len);
 
     std::string new_filename;
+#ifdef TEST
     new_filename += "bucket/";
+#endif
     new_filename += filename;
 
-    int fd = open(new_filename.c_str(), O_WRONLY | O_APPEND | O_CREAT | O_EXCL, *md);
+    int fd = open(new_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, *md);
     if (fd < 0)
         throw logger.errmsg("Counldn't create '%s'", filename);
     else
-        logger.print("File '%s' created.", filename);
+        logger.print("File created.", filename);
 
     void *buf;
     for (size_t chunk_len; *left_len > 0; *left_len -= chunk_len) {
-        chunk_len = 256;
+        chunk_len = *left_len;
         buf = rcv(udt, chunk_len);
         write(fd, buf, chunk_len);
         free(buf);
@@ -54,7 +56,8 @@ void receive_file(channel_t udt) {
     free(md);
     free(left_len);
 
-    logger.print("File '%s' successfully received.\n", filename);
+    logger.print("File '%s' successfully received.", filename);
+    logger.print("Waiting for next file.");
 }
 
 int main(int argc, char *argv[]) {
