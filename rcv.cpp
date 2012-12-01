@@ -17,12 +17,12 @@ void receive_file(channel_t udt) {
     size_t filename_len;
     char *filename = (char*) rcv(udt, filename_len);
     if (filename_len <= 0)
-        throw logger.raise("No filename received.");
+        logger.raise("No filename received.");
 
     size_t dummy;
     mode_t *md = (mode_t*) rcv(udt, dummy);
     if (dummy != sizeof(mode_t))
-        throw logger.raise("File permission size not valid.");
+        logger.raise("File permission size not valid.");
 
     off_t *left_len = (off_t*) rcv(udt, dummy);
 
