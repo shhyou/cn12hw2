@@ -22,7 +22,7 @@ channel_t::channel_t() {
 channel_t::~channel_t() {
 }
 
-ssize_t channel_t::send(void* buf, size_t len) const {
+ssize_t channel_t::send(const void* buf, size_t len) const {
     __logc;
 
     ssize_t ret = sendto(this->fd, buf, len, 0, (sockaddr*) &this->dest, sizeof(this->dest));
