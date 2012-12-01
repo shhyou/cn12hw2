@@ -15,11 +15,11 @@ using std::deque;
 using std::string;
 
 const int N = 512;
+const size_t BUFSIZE = 1024;
 
-/* package processing; Need this be moved to another file? */
 struct __attribute__((packed)) pkt_t {
 	unsigned char len;
-	unsigned int seq; /* I have no idea how long this should be */
+	unsigned int seq;
 	unsigned int crc;
 	unsigned char data[255 - 4 - 4];
 };
@@ -66,11 +66,11 @@ size_t unpkt(pkt_t &p, unsigned int &seq, void* data, size_t pktlen) {
 	int rcv_crc = p.crc;
 	ssize_t len = (ssize_t)p.len - sizeof(unsigned int) - sizeof(unsigned int);
 	if (p.len+1 != pktlen  ||   len <= 0)
-		throw string("packet corrupt; incorrect length");
+		logger.raise("packet corrupt; incorrect length");
 	p.crc = 0;
 	/* +1 for p.len itself */
 	if (crc32(&p, p.len + 1) != rcv_crc)
-		throw string("packet corrupt; failed crc32 check");
+		logger.raise("packet corrupt; failed crc32 check");
 	seq = p.seq;
 	memcpy(data, p.data, len);
 	return len;
@@ -80,16 +80,19 @@ void snd(channel_t udt, const void *data, size_t len) {
 	__log;
 
 	deque<pkt_t> window;
-	unsigned char *buf = new unsigned char[len + 4];
+	unsigned char *buf = (unsigned char*)malloc(len + 4);
 	size_t ptr = 0;
 	unsigned int base = 0, nxtseq = 0;
+
+	if (buf == NULL)
+		logger.raise("unable to allocate buffer");
 
 	memcpy(buf, (unsigned int*)&len, 4);
 	memcpy(buf+4, data, len);
 
 	auto rdt_send = [&window, buf, len, &ptr, &nxtseq, udt]() {
 		__log;
-		logger.print("> sending new data");
+		logger.print("rdt_send> sending new data, %6.2f (%lu/%lu)", 100.0*ptr/len, ptr, len);
 
 		assert(window.size() < N);
 		pkt_t pkt;
@@ -98,7 +101,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 		while (ptr!=len && window.size()<N) {
 			ptr += mkpkt(pkt, nxtseq, buf, len-ptr);
 			window.push_back(pkt);
-			/* no error catching. error in udt.send is considered to be fatal */
+			/* no error catching. error in udt.send is considered harmful */
 			udt.send(&pkt, pkt.len + 1);
 			nxtseq++;
 		}
@@ -106,9 +109,9 @@ void snd(channel_t udt, const void *data, size_t len) {
 		/* should be always true in this implementation though */
 	};
 
-	auto timeout = [&window, udt]() {
+	auto timeout = [&window, base, nxtseq, udt]() {
 		__log;
-		logger.print("> timeout; resending packets");
+		logger.print("timeout> timeout; resending packets in the window [%d,%d)", base, nxtseq);
 
 		deque<pkt_t>::iterator it;
 		for (it=window.begin(); it!=window.end(); it++) {
@@ -120,34 +123,38 @@ void snd(channel_t udt, const void *data, size_t len) {
 
 	auto rdt_rcv_ok = [&window, &base](unsigned int seq) {
 		__log;
-		logger.print("> received ACK, seq = %u", seq);
 
 		/* see if the ack is out of range */
 		/* that seq number is unsigned is essential here */
-		if (seq-base >= N)
+		if (seq-base >= N) {
+			logger.print("rdt_rcv_ok> ACK, seq = %u, base = %u, out of range", seq, base);
 			return true;
+		}
+
 		while (base != seq+1) {
 			window.pop_front();
 			base++;
 		}
+
+		logger.print("rdt_rcv_ok> ACK, seq = %u, remain window = %lu", seq, window.size());
 		return !window.empty();
 	};
 
 	auto rdt_rcv_broken = []() {
 		__log;
-		logger.print("> received broken packet");
-
-		/* do nothing ... maybe print log */
-		/* ha ha ha ha uccu */
+		logger.print("rdt_rcv_broken> received broken packet");
 		return true;
 	};
 
+	logger.print("Begin to send data (window size = %d, total length = %lu)", N, len);
+
 	try {
+		pkt_t pkt;
+		size_t rcvlen, pktlen;
+		char buf[BUFSIZE];
+
 		rdt_send();
 		while (ptr!=len || !window.empty()) {
-			pkt_t pkt;
-			size_t pktlen;
-			char buf[sizeof(pkt.data)];
 			pktlen = udt.recv(&pkt, sizeof(pkt));
 			if (pktlen == 0) { /* timeout */
 				timeout();
@@ -156,22 +163,101 @@ void snd(channel_t udt, const void *data, size_t len) {
 			try {
 				unsigned int seq = 0;
 				/* the content isn't really needed here... */
-				unpkt(pkt, seq, buf, pktlen);
+				rcvlen = unpkt(pkt, seq, buf, pktlen);
 				/* returning false indicating stop_timer, i.e. can send new data */
 				if (!rdt_rcv_ok(seq))
 					rdt_send();
 			} catch (const string& err) {
+				logger.eprint("%s", err.c_str());
 				rdt_rcv_broken();
 			}
 		}
-	} catch (const string& err) {
-		logger.eprint("Caught error: '%s'", err.c_str());
-	}
 
+		logger.print("All data sent. Waiting for FIN");
+		int retry = 10;
+
+		while (retry--) {
+			pktlen = udt.recv(&pkt, sizeof(pkt));
+			if (pktlen == 0) {
+				logger.print("timeout; retry...%d", retry);
+				continue;
+			}
+			try {
+				unsigned int seq = 0;
+				rcvlen = unpkt(pkt, seq, buf, pktlen);
+
+				if (rcvlen!=1 || buf[0]!=180) {
+					logger.print("not FIN signal; retry...%d", retry);
+				} else {
+					logger.print("FIN; transfer ended");
+					break;
+				}
+			} catch (const string& err) {
+				logger.print("unpkt error; retry...%d", retry);
+			}
+		}
+
+	} catch (const string& err) {
+		logger.eprint("Caught error '%s'", err.c_str());
+	}
 	delete[] buf;
 }
 
-size_t rcv(channel_t udt, void *&data) {
+void* rcv(channel_t udt, size_t &len) {
 	__log;
+	logger.print("Waiting for data");
 
+	unsigned char ACK = 'A', FIN = 180, INIT = -1;
+	unsigned int seq, expseq = 0;
+	size_t ptr = 0;
+	pkt_t echo;
+	len = -1;
+
+	auto rdt_rcv_ok = [&echo, &expseq, &ACK, udt](void* data, size_t len) {
+		/* deliver data ... save */
+		__log;
+		logger.print("rdt_rcv_ok> Magic! New data arrived!");
+		if (mkpkt(echo, expseq, &ACK, 1) != 1)
+			logger.raise("rdt_rcv_ok: mkpkt ACK error");
+		udt.send(&echo, echo.len + 1);
+		expseq++;
+	};
+
+	auto rdt_rcv_def = [&echo, udt]() {
+		__log;
+		logger.print("rdt_rcv_def> default: send prev ACK packet");
+		udt.send(&echo, echo.len + 1);
+	};
+
+	try {
+		pkt_t pkt;
+		size_t rcvlen, pktlen;
+		char buf[BUFSIZE];
+
+		if (mkpkt(echo, -1, &INIT, 1) != 1)
+			logger.raise("mkpkt init error");
+
+		while (1) {
+			/* TODO: allocate memory and save data (in rdt_rcv_ok) */
+			/* extract the first 4 bytes in the stream as total len */
+			/* ending when received expected len and send FIN */
+			pktlen = udt.recv(&pkt, sizeof(pkt));
+			if (pktlen == 0) /* no data */
+				continue;
+			try {
+				rcvlen = unpkt(pkt, seq, buf, pktlen);
+				if (seq != expseq)
+					logger.raise("expected seq %u but got %u", expseq, seq);
+				rdt_rcv_ok(buf, rcvlen);
+			} catch (const string& err) {
+				/* corrupt or seq != expseq */
+				logger.eprint("%s", err.c_str());
+				rdt_rcv_def();
+			}
+		}
+	} catch (const string& err) {
+		logger.eprint("Caught error '%s'", err.c_str());
+	}
+
+	return NULL;
 }

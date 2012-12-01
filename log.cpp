@@ -37,29 +37,41 @@ void logprint_t::operator()(const char *fmt, ...) const {
 	va_start(args, fmt);
 	strftime(buf, sizeof(buf), "%Y%m%d %a %H:%M:%S", localtime(&tm));
 
-	fprintf(output, "[%s] ", buf);
 	fprintf(output, "[%s] ", type);
-	fprintf(output, "Stack trace: %s", stktrace().c_str());
-	fprintf(output, "\n");
+	fprintf(output, "[\x1b[1;33m%s\x1b[m] ", buf);
+	fprintf(output, "%s", stktrace().c_str());
+	fprintf(output, "\n[	] ");
 	vfprintf(output, fmt, args);
 	fprintf(output, "\n");
 
 	va_end(args);
 }
 
-log_t::log_t(const char* t, const char* s) : print("info", stdout), eprint("err ", stderr) {
+log_t::log_t(const char* t, const char* s)
+	: print("\x1b[1;32mINFO\x1b[m", stdout), eprint("\x1b[1;31mERR \x1b[m", stderr) {
 	callstk.push_back(t);
 	callstk.back() += "::";
 	callstk.back() += s;
 }
 
-log_t::log_t(const char* s) : print("info", stdout), eprint("err ", stderr) {
+log_t::log_t(const char* s)
+	: print("\x1b[1;32mINFO\x1b[m", stdout), eprint("\x1b[1;31mERR \x1b[m", stderr) {
 	callstk.push_back(s);
 }
 
 log_t::~log_t() { callstk.pop_back(); }
 
 string log_t::trace() const { return stktrace(); }
+
+string log_t::raise(const char *fmt, ...) const {
+	va_list args;
+	va_start(args, fmt);
+	string res(strerrmsg(fmt, args, "raise"));
+	va_end(args);
+	throw res;
+	/* should not be executed */
+	return res;
+}
 
 string log_t::errmsg(const char *fmt, ...) const {
 	va_list args;

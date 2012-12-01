@@ -23,7 +23,7 @@ channel_t::~channel_t() {
 }
 
 ssize_t channel_t::send(void* buf, size_t len) const {
-	__logc;
+    __logc;
 
     ssize_t ret = sendto(this->fd, buf, len, 0, (sockaddr*) &this->dest, sizeof(this->dest));
     if (ret < 0)
@@ -32,7 +32,7 @@ ssize_t channel_t::send(void* buf, size_t len) const {
 }
 
 ssize_t channel_t::recv(void* buf, size_t maxlen) {
-	__logc;
+    __logc;
 
     fd_set readfds;
     FD_ZERO(&readfds);
@@ -64,7 +64,7 @@ void channel_t::close() {
 }
 
 channel_t udt_new(unsigned short port, const char *addr) {
-	__log;
+    __log;
 
     channel_t cnl;
     cnl.fd = socket(AF_INET, SOCK_DGRAM, 0);

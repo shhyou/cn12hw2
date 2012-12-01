@@ -44,6 +44,7 @@ struct log_t {
 	logprint_t print;
 	logprint_t eprint;
 	std::string trace() const;
+	std::string raise(const char* fmt, ...) const;
 	std::string errmsg(const char* fmt, ...) const;
 	std::string herrmsg(const char* fmt, ...) const;
 };

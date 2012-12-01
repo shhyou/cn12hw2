@@ -1,5 +1,5 @@
 CXX       = g++
-CXXFLAGS  = -std=c++0x
+CXXFLAGS  = -std=c++0x -Wall -Wshadow -Wextra
 HEADERS   = udt.h rdt.h log.h
 OBJS      = udt.o rdt.o log.o
 TARGET    = snd rcv
