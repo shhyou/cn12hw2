@@ -1,5 +1,5 @@
 CXX       = g++
-CXXFLAGS  = -std=c++0x -Wall -Wshadow -Wextra
+CXXFLAGS  = -std=c++0x -Wall -Wshadow -Wextra -DTEST
 HEADERS   = udt.h rdt.h log.h
 OBJS      = udt.o rdt.o log.o
 TARGET    = snd rcv
@@ -12,6 +12,7 @@ all: $(TARGET) $(OBJS)
 
 clean:
 	rm -f $(TARGET) $(OBJS)
+	rm -f bucket/*
 
 %.o: %.cpp $(HEADERS)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
