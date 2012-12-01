@@ -6,6 +6,6 @@
 #include "udt.h"
 
 void snd(channel_t udt, const void *data, size_t len);
-size_t rcv(channel_t udt, void *&data);
+void* rcv(channel_t udt, size_t& rcvlen);
 
 #endif

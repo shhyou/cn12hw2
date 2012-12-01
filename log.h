@@ -31,6 +31,7 @@ struct logprint_t {
  * log_t::trace   returnes a string of current stack
  * log_t::print   is for printing usual log (to stdout)
  * log_t::eprint  prints message to stderr
+ * log_t::raise   throw error (string) with msg and stack trace
  * log_t::errmsg  produces a string with designated message, system error
  *                message and stack trace
  * log_t::herrmsg is similar to log_t::errmsg except that strerror is

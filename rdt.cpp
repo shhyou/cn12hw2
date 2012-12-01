@@ -203,7 +203,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 	delete[] buf;
 }
 
-void* rcv(channel_t udt, size_t &len) {
+void* rcv(channel_t udt, size_t &rcvlen) {
 	__log;
 	logger.print("Waiting for data");
 
