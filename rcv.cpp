@@ -20,12 +20,13 @@ void receive_file(channel_t udt) {
         logger.raise("No filename received.");
     logger.print("Got filename: %s", filename);
 
-    size_t dummy;
+    size_t dummy = sizeof(mode_t);
     mode_t *md = (mode_t*) rcv(udt, dummy);
     if (dummy != sizeof(mode_t))
         logger.raise("File permission size not valid.");
     logger.print("Filemode received.");
 
+    dummy = sizeof(off_t);
     off_t *left_len = (off_t*) rcv(udt, dummy);
     logger.print("Filesize = %d", (int) *left_len);
 
@@ -41,6 +42,7 @@ void receive_file(channel_t udt) {
 
     void *buf;
     for (size_t chunk_len; *left_len > 0; *left_len -= chunk_len) {
+        chunk_len = 256;
         buf = rcv(udt, chunk_len);
         write(fd, buf, chunk_len);
         free(buf);

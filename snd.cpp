@@ -33,7 +33,7 @@ void send_file(const char *address, const int port, const char *pathname) {
     if (filename == NULL) filename = pathname;
     else filename += 1;
 
-    size_t filename_len = strlen(filename);
+    size_t filename_len = strlen(filename) + 1;
     if (filename_len >= filename_ubound)
         logger.print("Filename '%s' is too long, will be truncated to %d", filename, filename_ubound);
 
