@@ -32,18 +32,21 @@ void send_file(const char *address, const int port, const char *pathname) {
     const char *filename = strrchr(pathname, '/');
     if (filename == NULL) filename = pathname;
     else filename += 1;
-    
+
     size_t filename_len = strlen(filename);
     if (filename_len >= filename_ubound)
         logger.print("Filename '%s' is too long, will be truncated to %d", filename, filename_ubound);
 
     snd(udt, filename, filename_len);
+    logger.print("Sent filename %s", filename);
     
     /* send filesize */
     snd(udt, &st.st_size, sizeof(st.st_size));
+    logger.print("Sent filesize %d", st.st_size);
 
     /* send file protection */
     snd(udt, &st.st_mode, sizeof(st.st_mode));
+    logger.print("Sent fileprotection");
 
     /* send filedata */
     void *file_content;
@@ -74,7 +77,7 @@ int main(int argc, char *argv[]) {
     try {
         send_file(argv[1], atoi(argv[2]), argv[3]);
     } catch (const std::string& err) {
-        logger.eprint("    %s, program terminated.", err.c_str());
+        logger.eprint("%s, program terminated.", err.c_str());
     }
     
     return 0;

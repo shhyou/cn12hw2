@@ -46,10 +46,11 @@ ssize_t channel_t::recv(void* buf, size_t maxlen) {
         return 0;
     else if (srep < 0)
         throw logger.errmsg("select failed");
-    
+
+
     socklen_t len = sizeof(this->dest);
     ssize_t ret = recvfrom(this->fd, buf, maxlen, 0, (sockaddr*) &this->dest, &len);
-
+    
     if (ret < 0)
         throw logger.errmsg("failed to receive UDP package");
         
@@ -85,8 +86,10 @@ channel_t udt_new(unsigned short port, const char *addr) {
             throw logger.herrmsg("Couldn't get address of '%s'", addr);
         
         memcpy(&cnl.dest.sin_addr.s_addr, at->h_addr, at->h_length);
+/*
         if (connect(cnl.fd, (sockaddr*) &cnl.dest, sizeof(cnl.dest)) != 0)
             throw logger.errmsg("connecting error in udt_new");
+*/
         
     }
 
