@@ -14,7 +14,7 @@
 using std::deque;
 using std::string;
 
-const int N = 512;
+const unsigned int N = 512;
 const size_t BUFSIZE = 1024;
 
 struct __attribute__((packed)) pkt_t {
@@ -63,7 +63,7 @@ size_t mkpkt(pkt_t &p, unsigned int seq, void* data, size_t len) {
 size_t unpkt(pkt_t &p, unsigned int &seq, void* data, size_t pktlen) {
 	__log;
 
-	int rcv_crc = p.crc;
+	unsigned int rcv_crc = p.crc;
 	ssize_t len = (ssize_t)p.len - sizeof(unsigned int) - sizeof(unsigned int);
 	if (p.len+1 != pktlen  ||   len <= 0)
 		logger.raise("packet corrupt; incorrect length");
@@ -151,7 +151,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 	try {
 		pkt_t pkt;
 		size_t rcvlen, pktlen;
-		char buf[BUFSIZE];
+		unsigned char buf[BUFSIZE];
 
 		rdt_send();
 		while (ptr!=len || !window.empty()) {
@@ -211,7 +211,7 @@ void* rcv(channel_t udt, size_t &rcvlen) {
 	unsigned int seq, expseq = 0;
 	size_t ptr = 0;
 	pkt_t echo;
-	len = -1;
+	// len = -1;
 
 	auto rdt_rcv_ok = [&echo, &expseq, &ACK, udt](void* data, size_t len) {
 		/* deliver data ... save */

@@ -13,7 +13,7 @@
 #include "log.h"
 
 /* 240 is just a loose upper-bound, can change if needed */
-const int filename_ubound = 240;
+const unsigned int filename_ubound = 240;
 
 void send_file(const char *address, const int port, const char *pathname) {
     __log;

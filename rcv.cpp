@@ -14,28 +14,36 @@
 void receive_file(channel_t udt) {
     __log;
 
-    char filename[256];
-    size_t filename_len = rcv(udt, (void*) filename);
+    size_t filename_len;
+    char *filename = (char*) rcv(udt, filename_len);
+    if (filename_len <= 0)
+        throw logger.raise("No filename received.");
 
-    mode_t md;
-    rcv(udt, (void*) &md);
+    size_t dummy;
+    mode_t *md = (mode_t*) rcv(udt, dummy);
+    if (dummy != sizeof(mode_t))
+        throw logger.raise("File permission size not valid.");
 
-    int fd = open(filename, O_WRONLY | O_APPEND | O_CREAT | O_EXCL, md);
+    off_t *left_len = (off_t*) rcv(udt, dummy);
+
+    int fd = open(filename, O_WRONLY | O_APPEND | O_CREAT | O_EXCL, *md);
     if (fd < 0)
         throw logger.errmsg("Counldn't create '%s'", filename);
     else
         logger.print("File '%s' created.", filename);
 
-    off_t left_len;
-    rcv(udt, &left_len);
-
-    char buf[256];
-    for (size_t chunk_len; left_len > 0; left_len -= chunk_len) {
-        chunk_len = rcv(udt, buf);
+    void *buf;
+    for (size_t chunk_len; *left_len > 0; *left_len -= chunk_len) {
+        buf = rcv(udt, chunk_len);
         write(fd, buf, chunk_len);
+        free(buf);
     }
 
     close(fd);
+
+    free(filename);
+    free(md);
+    free(left_len);
 
     logger.print("File '%s' successfully received.\n", filename);
 }
