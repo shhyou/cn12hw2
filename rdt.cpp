@@ -14,7 +14,7 @@
 using std::deque;
 using std::string;
 
-const unsigned int N = 512;
+const unsigned int N = 256;
 const size_t BUFSIZE = 1024;
 
 struct __attribute__((packed)) pkt_t {
@@ -25,7 +25,7 @@ struct __attribute__((packed)) pkt_t {
 };
 
 unsigned int crc32(const void* data, size_t len) {
-	unsigned int tbl32[256];
+	static unsigned int tbl32[256];
 	if (!tbl32[0]) {
 		for (int i = 0; i < 256; i++) {
 			int poly = i;
@@ -86,7 +86,7 @@ void connfin(channel_t udt) {
 	size_t pktlen;
 
 	int retry = 10;
-	mkpkt(pkt, -1, &FIN, 1);
+	mkpkt(pkt, -2, &FIN, 1);
 	udt.send(&pkt, pkt.len + 1ul);
 
 	logger.print("FIN sent; waiting for FIN");
@@ -104,7 +104,7 @@ void connfin(channel_t udt) {
 			if (rcvlen!=1 || buf[0]!=180) {
 				logger.print("not FIN signal; retry...%d", retry);
 			} else {
-				logger.print("FIN; transfer ended");
+				logger.print("received FIN; transfer ended");
 				break;
 			}
 		} catch (const string& err) {
@@ -127,6 +127,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 
 	memcpy(buf, (unsigned int*)&len, 4);
 	memcpy(buf+4, data, len);
+	len += 4;
 
 	auto rdt_send = [&window, buf, len, &ptr, &nxtseq, udt]() {
 		__log;
@@ -136,17 +137,18 @@ void snd(channel_t udt, const void *data, size_t len) {
 		pkt_t pkt;
 		bool flag = window.empty();
 		while (ptr!=len && window.size()<N) {
-			ptr += mkpkt(pkt, nxtseq, buf, len-ptr);
+			ptr += mkpkt(pkt, nxtseq, buf+ptr, len-ptr);
 			window.push_back(pkt);
 			/* no error catching. error in udt.send is considered harmful */
 			udt.send(&pkt, pkt.len + 1ul);
 			nxtseq++;
 		}
+
 		return flag; /* true: start timer; false: no */
 		/* should be always true in this implementation though */
 	};
 
-	auto timeout = [&window, base, nxtseq, udt]() {
+	auto timeout = [&window, &base, &nxtseq, udt]() mutable {
 		__log;
 		logger.print("timeout> timeout; resending packets in the window [%d,%d)", base, nxtseq);
 
@@ -210,7 +212,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 			}
 		}
 
-		logger.print("All data received.");
+		logger.print("All data sent.");
 		connfin(udt);
 	} catch (const string& err) {
 		logger.eprint("Caught error '%s'", err.c_str());
@@ -228,9 +230,9 @@ void* rcv(channel_t udt, size_t &len) {
 	len = (size_t)-1;
 	unsigned char *buf = NULL;
 
-	auto rdt_rcv_ok = [&buf, &echo, &expseq, &ptr, &len, udt](void* pktbuf, size_t rcvlen) {
+	auto rdt_rcv_ok = [&buf, &echo, &expseq, &ptr, &len, &udt](void* pktbuf, size_t rcvlen) {
 		__log;
-		logger.print("rdt_rcv_ok> Magic! New data arrived!");
+		logger.print("rdt_rcv_ok> Magic! New data arrived! %lu", rcvlen);
 
 		char pktack = ACK;
 		if (mkpkt(echo, expseq, &pktack, 1) != 1)
@@ -257,7 +259,7 @@ void* rcv(channel_t udt, size_t &len) {
 		ptr += rcvlen;
 	};
 
-	auto rdt_rcv_def = [&echo, udt]() {
+	auto rdt_rcv_def = [&echo, &udt]() {
 		__log;
 		logger.print("rdt_rcv_def> default: send prev ACK packet");
 		udt.send(&echo, echo.len + 1ul);
@@ -266,7 +268,7 @@ void* rcv(channel_t udt, size_t &len) {
 	try {
 		pkt_t pkt;
 		size_t rcvlen, pktlen;
-		char pktbuf[BUFSIZE];
+		unsigned char pktbuf[BUFSIZE];
 
 		if (mkpkt(echo, -1, &INIT, 1) != 1)
 			logger.raise("mkpkt init error");
@@ -280,7 +282,7 @@ void* rcv(channel_t udt, size_t &len) {
 				rcvlen = unpkt(pkt, seq, pktbuf, pktlen);
 				if (seq != expseq)
 					logger.raise("expected seq %u but got %u", expseq, seq);
-				rdt_rcv_ok(buf, rcvlen);
+				rdt_rcv_ok(pktbuf, rcvlen);
 			} catch (const string& err) {
 				/* corrupt or seq != expseq */
 				logger.print("%s", err.c_str());

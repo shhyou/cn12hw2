@@ -5,9 +5,12 @@
 UDPProxy*
 test_udt/server
 test_udt/client
+test_rdt/server
+test_rdt/client
 snd
 rcv
 test_sndrcv/bucket*
 test_sndrcv/*.o
 test_sndrcv/snd
 test_sndrcv/rcv
+

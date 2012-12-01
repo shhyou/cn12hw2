@@ -7,9 +7,9 @@
 #include "../udt.h"
 #include "../rdt.h"
 
-using namespace std;
+#include "test.h"
 
-#define MAX 1048576
+using namespace std;
 
 unsigned int data[MAX];
 
@@ -21,13 +21,14 @@ int main() {
 	try {
 		void *buf;
 		unsigned int *pdata;
-		size_t siz = sizeof(unsigned int)*1;
+		size_t siz = sizeof(unsigned int)*SIZ;
 		channel_t udt = udt_new(51451);
 		buf = rcv(udt, siz);
-		logger.print("received data of length %lu\n", siz);
+		logger.print("received data of length %lu", siz);
 		pdata = (unsigned int*)buf;
-		for (int i = 0; i*sizeof(unsigned int)!=siz; i++)
-			printf("%u\t", pdata[i]);
+		for (unsigned int i = 0; i != siz/sizeof(unsigned int); i++)
+			if (pdata[i] != i) logger.eprint("data %u corrupt: expected %u but got %u",
+					i, data[i], pdata[i]);
 		free(buf);
 	} catch (const string& err) {
 		logger.eprint("%s", err.c_str());
