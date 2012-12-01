@@ -26,7 +26,11 @@ void receive_file(channel_t udt) {
 
     off_t *left_len = (off_t*) rcv(udt, dummy);
 
-    int fd = open(filename, O_WRONLY | O_APPEND | O_CREAT | O_EXCL, *md);
+    std::string new_filename;
+    new_filename += "bucket/";
+    new_filename += filename;
+
+    int fd = open(new_filename.c_str(), O_WRONLY | O_APPEND | O_CREAT | O_EXCL, *md);
     if (fd < 0)
         throw logger.errmsg("Counldn't create '%s'", filename);
     else
