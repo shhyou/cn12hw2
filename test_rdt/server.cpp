@@ -27,7 +27,7 @@ int main() {
 		logger.print("received data of length %lu", siz);
 		pdata = (unsigned int*)buf;
 		for (unsigned int i = 0; i != siz/sizeof(unsigned int); i++)
-			if (pdata[i] != i) logger.eprint("data %u corrupt: expected %u but got %u",
+			if (pdata[i] != data[i]) logger.eprint("data %u corrupt: expected %u but got %u",
 					i, data[i], pdata[i]);
 		free(buf);
 	} catch (const string& err) {

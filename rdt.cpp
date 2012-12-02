@@ -6,6 +6,9 @@
 
 #include <deque>
 #include <string>
+#include <functional>
+
+#include <unistd.h> // for usleep
 
 #include "log.h"
 #include "udt.h"
@@ -13,8 +16,9 @@
 
 using std::deque;
 using std::string;
+using std::bind;
 
-const unsigned int N = 256;
+const unsigned int N = 64;
 const size_t BUFSIZE = 1024;
 
 struct __attribute__((packed)) pkt_t {
@@ -77,6 +81,24 @@ size_t unpkt(pkt_t &p, unsigned int &seq, void* data, size_t pktlen) {
 	return len;
 }
 
+template<typename Func>
+ssize_t trycall(Func f) {
+	__log;
+
+	int retry = 5;
+	ssize_t res;
+	while (retry--) {
+		try {
+			res = f();
+			break;
+		} catch (const string& e) {
+			logger.eprint("\x1b[0;31m%s...retry %d\x1b[m", e.c_str(), retry);
+			usleep(250*1000); /* sleep before retry, less than timeout time */
+		}
+	}
+	return res;
+}
+
 static unsigned char ACK = 'A', FIN = 180, INIT = -1;
 
 void connfin(channel_t udt) {
@@ -87,11 +109,11 @@ void connfin(channel_t udt) {
 
 	int retry = 10;
 	mkpkt(pkt, -2, &FIN, 1);
-	udt.send(&pkt, pkt.len + 1ul);
+	trycall(bind(&channel_t::send, &udt, &pkt, pkt.len + 1ul));
 
-	logger.print("FIN sent; waiting for FIN");
+	logger.print("\x1b[1;36mFIN sent; waiting for FIN\x1b[m");
 	while (retry--) {
-		pktlen = udt.recv(&pkt, sizeof(pkt));
+		pktlen = trycall(bind(&channel_t::recv, &udt, &pkt, sizeof(pkt)));
 		if (pktlen == 0) {
 			logger.print("timeout; retry...%d", retry);
 			continue;
@@ -104,7 +126,7 @@ void connfin(channel_t udt) {
 			if (rcvlen!=1 || buf[0]!=180) {
 				logger.print("not FIN signal; retry...%d", retry);
 			} else {
-				logger.print("received FIN; transfer ended");
+				logger.print("\x1b[1;36mreceived FIN; transfer ended\x1b[m");
 				break;
 			}
 		} catch (const string& err) {
@@ -131,7 +153,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 
 	auto rdt_send = [&window, buf, len, &ptr, &nxtseq, udt]() {
 		__log;
-		logger.print("rdt_send> sending new data, %6.2f (%lu/%lu)", 100.0*ptr/len, ptr, len);
+		logger.print("\x1b[1;36mrdt_send> sending new data, %6.2f (%lu/%lu)\x1b[m", 100.0*ptr/len, ptr, len);
 
 		assert(window.size() < N);
 		pkt_t pkt;
@@ -140,7 +162,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 			ptr += mkpkt(pkt, nxtseq, buf+ptr, len-ptr);
 			window.push_back(pkt);
 			/* no error catching. error in udt.send is considered harmful */
-			udt.send(&pkt, pkt.len + 1ul);
+			trycall(bind(&channel_t::send, &udt, &pkt, pkt.len + 1ul));
 			nxtseq++;
 		}
 
@@ -155,7 +177,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 		deque<pkt_t>::iterator it;
 		for (it=window.begin(); it!=window.end(); it++) {
 			pkt_t pkt = *it;
-			udt.send(&pkt, pkt.len + 1ul);
+			trycall(bind(&channel_t::send, &udt, &pkt, pkt.len + 1ul));
 		}
 		return true;
 	};
@@ -166,7 +188,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 		/* see if the ack is out of range */
 		/* that seq number is unsigned is essential here */
 		if (seq-base >= N) {
-			logger.print("rdt_rcv_ok> ACK, seq = %u, base = %u, out of range", seq, base);
+			logger.print("\x1b[1;34mrdt_rcv_ok> ACK, seq = %u, base = %u, out of range\x1b[m", seq, base);
 			return true;
 		}
 
@@ -175,7 +197,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 			base++;
 		}
 
-		logger.print("rdt_rcv_ok> ACK, seq = %u, remain window = %lu", seq, window.size());
+		logger.print("\x1b[1;34mrdt_rcv_ok> ACK, seq = %u, remain window = %lu\x1b[m", seq, window.size());
 		return !window.empty();
 	};
 
@@ -185,7 +207,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 		return true;
 	};
 
-	logger.print("Begin to send data (window size = %d, total length = %lu)", N, len);
+	logger.print("\x1b[1;37m]Begin to send data (window size = %d, total length = %lu)\x1b[m", N, len);
 
 	try {
 		pkt_t pkt;
@@ -194,7 +216,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 
 		rdt_send();
 		while (ptr!=len || !window.empty()) {
-			pktlen = udt.recv(&pkt, sizeof(pkt));
+			pktlen = trycall(bind(&channel_t::recv, &udt, &pkt, sizeof(pkt)));
 			if (pktlen == 0) { /* timeout */
 				timeout();
 				continue;
@@ -212,17 +234,17 @@ void snd(channel_t udt, const void *data, size_t len) {
 			}
 		}
 
-		logger.print("All data sent.");
+		logger.print("\x1b[1;37mAll data sent.\x1b[m");
 		connfin(udt);
 	} catch (const string& err) {
-		logger.eprint("Caught error '%s'", err.c_str());
+		logger.eprint("\x1b[1;31mCaught error '%s'\x1b[m", err.c_str());
 	}
 	free(buf);
 }
 
 void* rcv(channel_t udt, size_t &len) {
 	__log;
-	logger.print("Waiting for data");
+	logger.print("\x1b[1;37mWaiting for data\x1b[m");
 
 	unsigned int seq, expseq = 0;
 	size_t ptr = 0;
@@ -232,12 +254,12 @@ void* rcv(channel_t udt, size_t &len) {
 
 	auto rdt_rcv_ok = [&buf, &echo, &expseq, &ptr, &len, &udt](void* pktbuf, size_t rcvlen) {
 		__log;
-		logger.print("rdt_rcv_ok> Magic! New data arrived! %lu", rcvlen);
+		logger.print("\x1b[1;32mrdt_rcv_ok> Magic! New data arrived!\x1b[m");
 
 		char pktack = ACK;
 		if (mkpkt(echo, expseq, &pktack, 1) != 1)
 			logger.raise("rdt_rcv_ok: mkpkt ACK error");
-		udt.send(&echo, echo.len + 1ul);
+		trycall(bind(&channel_t::send, &udt, &echo, echo.len + 1ul));
 
 		expseq++;
 
@@ -261,8 +283,8 @@ void* rcv(channel_t udt, size_t &len) {
 
 	auto rdt_rcv_def = [&echo, &udt]() {
 		__log;
-		logger.print("rdt_rcv_def> default: send prev ACK packet");
-		udt.send(&echo, echo.len + 1ul);
+		logger.print("\x1b[1;36mrdt_rcv_def> default: send prev ACK packet\x1b[m");
+		trycall(bind(&channel_t::send, &udt, &echo, echo.len + 1ul));
 	};
 
 	try {
@@ -275,7 +297,7 @@ void* rcv(channel_t udt, size_t &len) {
 
 		while (ptr != len) {
 			/* ending when received expected len and send FIN */
-			pktlen = udt.recv(&pkt, sizeof(pkt));
+			pktlen = trycall(bind(&channel_t::recv, &udt, &pkt, sizeof(pkt)));
 			if (pktlen == 0) /* no data */
 				continue;
 			try {
@@ -290,10 +312,10 @@ void* rcv(channel_t udt, size_t &len) {
 			}
 		}
 
-		logger.print("All data received.");
+		logger.print("\x1b[1;37mAll data received.\x1b[m");
 		connfin(udt);
 	} catch (const string& err) {
-		logger.eprint("Caught error '%s'", err.c_str());
+		logger.eprint("\x1b[1;31mCaught error '%s'\x1b[m", err.c_str());
 		if (buf != NULL) free(buf);
 		logger.raise(err.c_str());
 	}
