@@ -16,7 +16,8 @@ unsigned int data[MAX];
 int main(int argc, char *argv[]) {
 	__log;
 
-    int port = 51451;
+    //int port = 51451;
+	int port = 5000;
     if (argc >= 2) port = atoi(argv[1]);
 
 	for (int i = 0; i != MAX; i++)

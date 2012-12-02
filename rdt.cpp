@@ -18,7 +18,7 @@ using std::deque;
 using std::string;
 using std::bind;
 
-const unsigned int N = 64;
+const unsigned int N = 8;
 const size_t BUFSIZE = 1024;
 
 struct __attribute__((packed)) pkt_t {
@@ -71,7 +71,7 @@ size_t unpkt(pkt_t &p, unsigned int &seq, void* data, size_t pktlen) {
 	ssize_t len = (ssize_t)p.len - sizeof(unsigned int) - sizeof(unsigned int);
 	/* check correctness of pktlen, and that p should contains at least 1 byte of data */
 	if (size_t(p.len)+1ul != pktlen || len <= 0)
-		logger.raise("packet corrupt; incorrect length");
+		logger.raise("packet corrupt; incorrect length p.len=%u pktlen=%u", size_t(p.len), pktlen);
 	p.crc = 0;
 	/* +1ul for p.len itself */
 	if (crc32(&p, p.len + 1ul) != rcv_crc)
@@ -170,9 +170,9 @@ void snd(channel_t udt, const void *data, size_t len) {
 		/* should be always true in this implementation though */
 	};
 
-	auto timeout = [&window, &base, &nxtseq, udt]() mutable {
+	auto timeout = [&window, &base, &nxtseq, udt]() {
 		__log;
-		logger.print("timeout> timeout; resending packets in the window [%d,%d)", base, nxtseq);
+		logger.print("timeout> timeout; resending packets in the window [%d,%d) %lu", base, nxtseq, window.size());
 
 		deque<pkt_t>::iterator it;
 		for (it=window.begin(); it!=window.end(); it++) {
@@ -197,7 +197,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 			base++;
 		}
 
-		logger.print("\x1b[1;34mrdt_rcv_ok> ACK, seq = %u, remain window = %lu\x1b[m", seq, window.size());
+		logger.print("\x1b[1;34mrdt_rcv_ok> ACK, base = %u, seq = %u, remain window = %lu\x1b[m", base, seq, window.size());
 		return !window.empty();
 	};
 
@@ -283,7 +283,7 @@ void* rcv(channel_t udt, size_t &len) {
 
 	auto rdt_rcv_def = [&echo, &udt]() {
 		__log;
-		logger.print("\x1b[1;36mrdt_rcv_def> default: send prev ACK packet\x1b[m");
+		logger.print("\x1b[1;36mrdt_rcv_def> default: send prev ACK packet , seq=%u\x1b[m", echo.seq);
 		trycall(bind(&channel_t::send, &udt, &echo, echo.len + 1ul));
 	};
 
@@ -307,7 +307,7 @@ void* rcv(channel_t udt, size_t &len) {
 				rdt_rcv_ok(pktbuf, rcvlen);
 			} catch (const string& err) {
 				/* corrupt or seq != expseq */
-				logger.print("%s", err.c_str());
+				logger.print("\x1b[0;31m%s\x1b[m", err.c_str());
 				rdt_rcv_def();
 			}
 		}
