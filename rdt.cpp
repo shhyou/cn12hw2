@@ -254,7 +254,7 @@ void* rcv(channel_t udt, size_t &len) {
 
 	auto rdt_rcv_ok = [&buf, &echo, &expseq, &ptr, &len, &udt](void* pktbuf, size_t rcvlen) {
 		__log;
-		logger.print("\x1b[1;32mrdt_rcv_ok> Magic! New data arrived!\x1b[m");
+		logger.print("\x1b[1;34mrdt_rcv_ok> Magic! New data arrived!\x1b[m");
 
 		char pktack = ACK;
 		if (mkpkt(echo, expseq, &pktack, 1) != 1)
