@@ -77,6 +77,15 @@ int main(int argc, char *argv[]) {
 
     try {
         send_file(argv[1], atoi(argv[2]), argv[3]);
+
+#ifdef TEST
+        std::string cmd = "diff ";
+        cmd += argv[3];
+        cmd += " bucket/";
+        cmd += argv[3];
+        logger.print("%s", cmd.c_str());
+        system(cmd.c_str());
+#endif
     } catch (const std::string& err) {
         logger.eprint("%s, program terminated.", err.c_str());
     }

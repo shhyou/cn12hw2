@@ -207,7 +207,7 @@ void snd(channel_t udt, const void *data, size_t len) {
 		return true;
 	};
 
-	logger.print("\x1b[1;37m]Begin to send data (window size = %d, total length = %lu)\x1b[m", N, len);
+	logger.print("\x1b[1;37mBegin to send data (window size = %d, total length = %lu)\x1b[m", N, len);
 
 	try {
 		pkt_t pkt;

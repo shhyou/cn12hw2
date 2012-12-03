@@ -2,7 +2,11 @@
 *.o
 #*#
 .#README.md
-UDPProxy*
+
+UDPProxy/*
+UDPProxy
+udpproxy.conf
+
 test_udt/server
 test_udt/client
 test_rdt/server

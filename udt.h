@@ -11,12 +11,16 @@
 struct channel_t {
     int fd;
     timeval timeout;
+    sockaddr_in dest;
+
     channel_t();
     ~channel_t();
-    sockaddr_in dest;
+
     ssize_t send(const void* buf, size_t len) const; /* may throw error (string)*/
     ssize_t recv(void* buf, size_t maxlen); /* may throw error (string) */
     /* note that recv changes dest to the incomer's IP nomatter it succeesed or not*/
+
+    void clear_buffer();
     void close();
 };
 

@@ -64,6 +64,35 @@ void channel_t::close() {
         this->fd = -1;
 }
 
+void channel_t::clear_buffer() {
+    __logc;
+    
+    timeval ltimeout;
+    fd_set readfds;
+
+    while (true) {
+        bzero(&ltimeout, sizeof(ltimeout));
+        FD_ZERO(&readfds);
+        FD_SET(this->fd, &readfds);
+        int srep = select(this->fd + 1, &readfds, NULL, NULL, &ltimeout);
+
+        if (srep == -1)
+            throw logger.errmsg("Select failed");
+        else if (srep == 0)
+            break;
+        else {
+            socklen_t len = sizeof(this->dest);
+            char buf[1];
+            ssize_t ret = recvfrom(this->fd, buf, sizeof(buf), 0, (sockaddr*) &this->dest, &len);
+            if (ret < 0)
+                throw logger.errmsg("Strange error occurred on cleaning buffer");
+            else if (ret == 0)
+                break;
+        }
+        
+    }
+}
+
 channel_t udt_new(unsigned short port, const char *addr) {
     __log;
 

@@ -11,6 +11,8 @@
 #include "rdt.h"
 #include "log.h"
 
+std::string created_file;
+
 void receive_file(channel_t udt) {
     __log;
 
@@ -23,7 +25,7 @@ void receive_file(channel_t udt) {
     size_t dummy = sizeof(mode_t);
     mode_t *md = (mode_t*) rcv(udt, dummy);
     if (dummy != sizeof(mode_t))
-        logger.raise("File permission size not valid.");
+        logger.raise("File permission size %u not valid (excepted %u).", dummy, sizeof(mode_t));
     logger.print("Filemode %d received.", (int) *md);
 
     dummy = sizeof(off_t);
@@ -42,6 +44,8 @@ void receive_file(channel_t udt) {
     else
         logger.print("File created.", filename);
 
+    created_file = new_filename;
+
     void *buf;
     for (size_t chunk_len; *left_len > 0; *left_len -= chunk_len) {
         chunk_len = *left_len;
@@ -56,7 +60,9 @@ void receive_file(channel_t udt) {
     free(md);
     free(left_len);
 
-    logger.print("File '%s' successfully received.", filename);
+    created_file = "";
+
+    logger.print("File '%s' successfully received.", new_filename.c_str());
     logger.print("Waiting for next file.");
 }
 
@@ -79,6 +85,12 @@ int main(int argc, char *argv[]) {
 
     } catch (const std::string& err) {
         logger.eprint("%s, program terminated.", err.c_str());
+
+        int errno_tmp = errno;
+        if (created_file.size() != 0)
+            remove(created_file.c_str());
+        errno = errno_tmp;
+                
     }
     return 0;
 }

@@ -5,13 +5,18 @@ OBJS      = udt.o rdt.o log.o
 TARGET    = snd rcv
 #TARGET    =
 
-.PHONY: all clean
+.PHONY: all clean UDPProxy
 .SUFFIXES:
 
 all: $(TARGET) $(OBJS)
 
-clean:
+clean: bucket_clean
 	rm -f $(TARGET) $(OBJS)
+
+UDPProxy:
+	gcc UDPProxy.c -o UDPProxy
+
+bucket_clean:
 	rm -f bucket/*
 
 %.o: %.cpp $(HEADERS)
