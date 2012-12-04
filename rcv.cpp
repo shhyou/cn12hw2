@@ -40,7 +40,7 @@ void receive_file(channel_t udt) {
 
     int fd = open(new_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, *md);
     if (fd < 0)
-        throw logger.errmsg("Counldn't create '%s'", filename);
+        throw logger.errmsg("Counldn't create '%s'", new_filename.c_str());
     else
         logger.print("File created.", filename);
 

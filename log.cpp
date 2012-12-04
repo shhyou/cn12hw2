@@ -39,8 +39,8 @@ void logprint_t::operator()(const char *fmt, ...) const {
 
 	fprintf(output, "[%s] ", type);
 	fprintf(output, "[\x1b[1;33m%s\x1b[m] ", buf);
-	fprintf(output, "%s", stktrace().c_str());
-	fprintf(output, "\n[    ] ");
+	fprintf(output, "\x1b[1;30m%s\x1b[m", stktrace().c_str());
+	fprintf(output, "\n\x1b[1;30m|    |\x1b[m ");
 	vfprintf(output, fmt, args);
 	fprintf(output, "\n");
 

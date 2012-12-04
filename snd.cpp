@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     
     if (argc < 4) {
         puts("Usage:");
-        puts("./snd target_ip target_port filename");
+        puts("./snd target_hostname target_port filename");
         return 0;
     }
 

@@ -4,6 +4,7 @@
 #include <ctime>
 #include <cstdio>
 #include <cstdarg>
+#include <cstring>
 
 #include <string>
 #include <vector>
@@ -17,7 +18,9 @@ std::vector<std::string> callstk;
 #endif
 
 /* __logc is for logging function in a class/struct; it includes type signatures */
+/* __logl is for lambda functions: pretty function names are much expressive and longer */
 #define __log log_t logger(__func__)
+#define __logl log_t logger(strchr(__PRETTY_FUNCTION__, ':') + 2) 
 #define __logc log_t logger(typeid(*this).name(), __func__)
 
 struct logprint_t {
