@@ -1,6 +1,7 @@
 /* Sender code, reading file and sending using rdt */
 #include <cstdio>
 #include <cstring>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -37,33 +38,40 @@ void send_file(const char *address, const int port, const char *pathname) {
     if (filename_len >= filename_ubound)
         logger.print("Filename '%s' is too long, will be truncated.", filename, filename_ubound);
 
-    snd(udt, filename, filename_len);
-    logger.print("Filename sent.");
-    
-    /* send file protection */
-    snd(udt, &st.st_mode, sizeof(st.st_mode));
-    logger.print("File permission sent.");
+    size_t buffer_len = sizeof(int) + filename_len + sizeof(st.st_mode) + sizeof(st.st_size) + st.st_size;
+    char* buffer = (char*)malloc(buffer_len);
+    char* ptr = buffer;
+    *(int*) ptr = filename_len;
+    ptr += sizeof(int);
 
-    /* send filesize */
-    snd(udt, &st.st_size, sizeof(st.st_size));
-    logger.print("%s's size is %d bytes.", filename, st.st_size);
+    memcpy(ptr, filename, filename_len);
+    ptr += filename_len;
 
-    /* send filedata */
-    void *file_content;
-    off_t content_len;
-    /* Modify below if mmap crashes */
-    file_content = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (file_content == MAP_FAILED)
-        throw std::string("Failed to read file into memory");
-    content_len = st.st_size;
+    *(mode_t*) ptr = st.st_mode;
+    ptr += sizeof(st.st_mode);
 
-    snd(udt, file_content, content_len);
-    logger.print("File content sent.");
+    *(off_t*) ptr = st.st_size;
+    ptr += sizeof(st.st_size);
 
-    munmap(file_content, st.st_size);
+    const int buf_len = 1024;
+    for (off_t content_len = 0; content_len < st.st_size; ) {
+        ssize_t ret = read(fd, ptr, buf_len);
+        if (ret == 0)
+            logger.raise("Got EOF earlier than excepted.");
+        else if (ret < 0)
+            throw logger.errmsg("Failed to read file");
+        content_len += ret;
+        ptr += ret;
+    }
+
+    snd(udt, buffer, buffer_len);
+    logger.print("File sent.");
+
     /* end sending file */
 
     udt.close();
+    free(buffer);
+    close(fd);
 }
 
 int main(int argc, char *argv[]) {

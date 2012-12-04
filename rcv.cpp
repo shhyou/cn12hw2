@@ -1,5 +1,6 @@
 /* Receiver code, receiving file using rdt and writing it */
 #include <cstdio>
+#include <cstring>
 #include <string>
 
 #include <sys/types.h>
@@ -16,21 +17,29 @@ std::string created_file;
 void receive_file(channel_t udt) {
     __log;
 
-    size_t filename_len = 1024;
-    char *filename = (char*) rcv(udt, filename_len);
+    size_t max_filesize = 0x3FFFFFFF;
+    char *buffer = (char*) rcv(udt, max_filesize);
+    if (buffer == NULL)
+        logger.raise("rcv returned NULL");
+    char *ptr = buffer;
+
+    int filename_len = *(int*) ptr;
+    ptr += sizeof(int);
+
+    char filename[filename_len];
+    strcpy(filename, ptr);
+    ptr += filename_len;
     if (filename_len <= 0)
         logger.raise("No filename received.");
     logger.print("Filename %s received.", filename);
 
-    size_t dummy = sizeof(mode_t);
-    mode_t *md = (mode_t*) rcv(udt, dummy);
-    if (dummy != sizeof(mode_t))
-        logger.raise("File permission size %u not valid (excepted %u).", dummy, sizeof(mode_t));
-    logger.print("Filemode %d received.", (int) *md);
+    mode_t md = *(mode_t*) ptr;
+    ptr += sizeof(mode_t);
+    logger.print("The file's permission is %u", (int) md);
 
-    dummy = sizeof(off_t);
-    off_t *left_len = (off_t*) rcv(udt, dummy);
-    logger.print("The file's size is %d bytes.", (int) *left_len);
+    off_t left_len = *(off_t*) ptr;
+    ptr += sizeof(off_t);
+    logger.print("The file's size is %d bytes.", (int) left_len);
 
     std::string new_filename;
 #ifdef TEST
@@ -38,7 +47,7 @@ void receive_file(channel_t udt) {
 #endif
     new_filename += filename;
 
-    int fd = open(new_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, *md);
+    int fd = open(new_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, md);
     if (fd < 0)
         throw logger.errmsg("Counldn't create '%s'", filename);
     else
@@ -46,24 +55,21 @@ void receive_file(channel_t udt) {
 
     created_file = new_filename;
 
-    void *buf;
-    for (size_t chunk_len; *left_len > 0; *left_len -= chunk_len) {
-        chunk_len = *left_len;
-        buf = rcv(udt, chunk_len);
-        write(fd, buf, chunk_len);
-        free(buf);
+    while (left_len > 0) {
+        ssize_t ret = write(fd, ptr, left_len);
+        if (ret < 0)
+            throw logger.errmsg("Failed to write file into disk");
+        ptr += ret;
+        left_len -= ret;
     }
 
     close(fd);
 
-    free(filename);
-    free(md);
-    free(left_len);
+    free(buffer);
 
     created_file = "";
 
     logger.print("File '%s' successfully received.", new_filename.c_str());
-    logger.print("Waiting for next file.");
 }
 
 int main(int argc, char *argv[]) {
@@ -81,7 +87,7 @@ int main(int argc, char *argv[]) {
 
         logger.print("Listening on port %d", atoi(argv[1]));
 
-        while (true) receive_file(udt);
+        receive_file(udt);
 
     } catch (const std::string& err) {
         logger.eprint("%s, program terminated.", err.c_str());

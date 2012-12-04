@@ -14,14 +14,14 @@ clean: bucket_clean
 	rm -f $(TARGET) $(OBJS)
 
 UDPProxy:
-	gcc UDPProxy.c -o UDPProxy
+	@gcc UDPProxy.c -o UDPProxy
 
 bucket_clean:
 	rm -f bucket/*
 
 %.o: %.cpp $(HEADERS)
-	$(CXX) -c -o $@ $< $(CXXFLAGS)
+	@$(CXX) -c -o $@ $< $(CXXFLAGS)
 
 %: %.cpp $(OBJS) $(HEADERS)
-	$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS)
+	@$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS)
 
