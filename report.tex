@@ -32,8 +32,7 @@ $ ./sender TARGET_HOSTNAME TARGET_IP FILENAME                                 se
 
     Transferring multiple files simultaneously is not supported, however.
 \section{Unreliable Data Transfer Layer}
-    This layer simply uses UDP to transfer data. This layer provides functions to open UDP sockets, to send packages to and receives packages from the socket, and to close the socket. This layer also provides an additional function that clears the socket buffer in case that there are any redundant packages left in the socket.
-    % POSSIBLY TODO: WHAT HAVE WE DONE TO THE UDP SOCKET? FUNCTIONALITY OF udt.cpp?
+    This layer simply uses UDP to transfer data. This layer provides functions to open UDP sockets, to send packages to and receives packages from the socket, and to close the socket. The receive and send functions are both blocking, but the receive function only waits for a limited time which can be set by the function caller and is $0.5$ seconds by default. This layer also provides an additional function that clears the socket buffer in case that there are any redundant packages left in the socket.
 
 \section{Reliable Data Transfer Layer}
 \subsection{Packet Format}
@@ -73,8 +72,8 @@ snd            rcv
 |    <---FIN---  |    FIN == last packet's ACK
 | \              |
 |  --FINACK-->  -|
-|              /
-|    --FINACK--
+|                /
+|    --FINACK----
 |   /
 | <-
 \end{verbatim}
@@ -113,19 +112,17 @@ Since data packets and reply packets are undistinguishable, that the receiver se
         There is a checksum in every packet sent. When received, the program checks if the checksum in the package is correct. Corrupted packets are ignored. The use of CRC-32 which is based on cyclic error-checking codes guarantees low error rate.
 
 \section{Application Layer}
-    
     Sender and receiver calls the RDT (reliable data transfer) layer multiple times to send a file. More precisely, the sender sends four things in order: the file's name, the file's permission, the file's size, and at last the file's content. The first three items are sent in one call, and the last one may be sent in many calls. The receiver receives the four things in order, and creates the file after it gets the file's size.
 
 \section{Extra work}
+    Our reliable data transfer functions enable us to freely send data without worrying data loss or corruption. The connection termination control realized makes it possible to send data more then once, and the sending process is much stabler. Connection termination is implemented by sending FIN packets using three-way handshake, see section ``Reliable Data Transfer Layer" for details. Though neither full connection management nor simultaneously transferring data is supported, the design has made it easier to use.
 
-    Our reliable data transfer functions enable us to freely send data without worrying data loss or corruption. The connection termination control realized makes it possible to send data more then once. Though neither full connection management nor simultaneously transferring data is supported, the design has made it easier to use.
-
-    Besides the additional connection termination control, we have also implemented a colourful logging functions which provides (handmade) stack trace to make debugging more tolerable. See snapshots. 
+    Besides the additional connection termination control, when transferring files, the name and permissions are preserved under transmission. Also, we have implemented a colourful logging functions which provides (handmade) stack trace to make debugging more tolerable. See snapshots. 
 \section{Snapshots}
 \begin{center}
 \includegraphics[scale=0.8]{shotsnd.jpg}\\
-\includegraphics[scale=0.8]{shotrcv.jpg}\\
-\includegraphics[scale=0.8]{shotproxy.jpg}
+\includegraphics[scale=0.75]{shotrcv.jpg}\\
+\includegraphics[scale=0.75]{shotproxy.jpg}
 \end{center}
 \begin{center}
 {\small The sender, receiver, and UDPProxy}
