@@ -3,10 +3,11 @@ CXXFLAGS  = -std=c++0x -Wall -Wshadow -Wextra
 DEBUG     =
 HEADERS   = udt.h rdt.h log.h
 OBJS      = udt.o rdt.o log.o
-TARGET    = snd rcv sender receiver
+CPPS      = udt.cpp rdt.cpp log.cpp snd.cpp rcv.cpp
+TARGET    = sender receiver
 #TARGET    =
 
-.PHONY: all clean UDPProxy
+.PHONY: all clean UDPProxy pack
 .SUFFIXES:
 
 all: $(TARGET) $(OBJS)
@@ -32,3 +33,8 @@ receiver: rcv.cpp $(OBJS) $(HEADERS)
 %: %.cpp $(OBJS) $(HEADERS)
 	$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS) $(DEBUG)
 
+report.pdf: report.tex
+	pdflatex report
+
+pack: $(HEADERS) $(CPPS) report.pdf
+	@zip b00902031_b00902107.zip $(HEADERS) $(CPPS) report.pdf Makefile
