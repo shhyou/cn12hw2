@@ -50,12 +50,32 @@ $ ./receiver LISTEN_PORT						receive files, waiting at port LISTEN_PORT
 
     
 \subsection{Receiver and Sender FSM}
-    % include graphics here
+    \begin{center}
+        \includegraphics[scale=0.7]{fsmsnd.jpg}
+        \; \; \;
+        \includegraphics[scale=0.7]{fsmrcv.jpg}
+    \end{center}
+    \subsubsection{Sender}
     \begin{enumerate}
+    	\item \texttt{snd}:
         \item \texttt{rdt\_send}:
         \item \texttt{rdt\_rcv\_ok}:
         \item \texttt{rdt\_rcv\_broken}:
         \item \texttt{timeout}:
+        \item \texttt{send::FIN}:
+        \item \texttt{others}:
+        \item \texttt{close\_wait::FIN}:
+        \item \texttt{FINACK}, \texttt{close\_wait::timeout}:
+    \end{enumerate}
+    \subsubsection{Receiver}
+    \begin{enumerate}
+        \item \texttt{rcv}:
+        \item \texttt{rdt\_rcv\_ok}:
+        \item \texttt{rdt\_rcv\_def}:
+        \item \texttt{last}:
+        \item \texttt{timeout}:
+        \item \texttt{others}:
+        \item \texttt{FINACK}, \texttt{timeoutL}:
     \end{enumerate}
 \subsection{Protocol}
 \subsection{Loss and error solving}
