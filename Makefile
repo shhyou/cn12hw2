@@ -26,7 +26,7 @@ bucket_clean:
 sender: snd.cpp $(OBJS) $(HEADERS)
 	$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS) $(DEBUG)
 
-receiver: snd.cpp $(OBJS) $(HEADERS)
+receiver: rcv.cpp $(OBJS) $(HEADERS)
 	$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS) $(DEBUG)
 
 %: %.cpp $(OBJS) $(HEADERS)
