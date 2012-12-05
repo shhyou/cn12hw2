@@ -18,3 +18,8 @@ test_sndrcv/*.o
 test_sndrcv/snd
 test_sndrcv/rcv
 bucket/*
+
+b00902031_b00902107.zip
+report.aux
+report.log
+auto*

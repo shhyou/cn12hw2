@@ -31,14 +31,15 @@ $ ./receiver LISTEN_PORT						receive files, waiting at port LISTEN_PORT
 
     The receiver continues to receive files after previous transfer has ended until a \texttt{\^{}C} is hit. Transferring multiple files simultaneously is not support, however.
 \section{Unreliable Data Transfer Layer}
-    This layer simply uses UDP to transfer data.
-    POSSIBLY TODO: WHAT HAVE WE DONE TO THE UDP SOCKET? FUNCTIONALITY OF udt.cpp?
+    This layer simply uses UDP to transfer data. This layer provides functions to open UDP sockets, to send packages to and receives packages from the socket, and to close the socket. This layer also provides an additional function that clears the socket buffer in case that there are any redundant packages left in the socket.
+    % POSSIBLY TODO: WHAT HAVE WE DONE TO THE UDP SOCKET? FUNCTIONALITY OF udt.cpp?
+
 \section{Reliable Data Transfer Layer}
 \subsection{Packet Format}
     The size of packets varies from $9$ bytes to $256$ bytes. The first byte of the packet specifies the size of the following data, that is, $8$ bytes plus the length of the content. It is followed by a $4$-byte unsigned integer sequence number, and a $4$-byte unsigned int CRC-32 checksum. The rest are the actual data that we want to transfer, whose length could be from $1$ byte to $247$ bytes.
 
 \begin{center}
-    \begin{tabular}{lccc}
+    \begin{tabular}{lcc}
         Entry Name & Size (bytes) & Interpretation \\%& Type & Meaning\\
             \hline
         packet size & $1$ &  size of the packet (exclusive of this entry)\\ 
@@ -78,7 +79,7 @@ $ ./receiver LISTEN_PORT						receive files, waiting at port LISTEN_PORT
         \item \texttt{FINACK}, \texttt{timeoutL}:
     \end{enumerate}
 \subsection{Protocol}
-\subsection{Loss and error solving}
+\section{Loss and error solving}
     \subsection{Packet loss solving}
         Nice question, horrible solution.
     \subsection{Packet error solving}
