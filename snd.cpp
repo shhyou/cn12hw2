@@ -1,6 +1,7 @@
 /* Sender code, reading file and sending using rdt */
 #include <cstdio>
 #include <cstring>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -64,6 +65,7 @@ void send_file(const char *address, const int port, const char *pathname) {
     /* end sending file */
 
     udt.close();
+    close(fd);
 }
 
 int main(int argc, char *argv[]) {
