@@ -49,6 +49,7 @@ $ ./receiver LISTEN_PORT						receive files, waiting at port LISTEN_PORT
     \end{tabular}
 \end{center}
 
+The constant used for CRC-32 checksum is \texttt{0xEDB88320}.
     
 \subsection{Receiver and Sender FSM}
     \begin{center}
@@ -97,14 +98,22 @@ snd            rcv
         \item \texttt{FINACK}, \texttt{timeoutL}: for \texttt{FINACK}, send FINACK and exit. for \texttt{timeoutL}, exit.
     \end{enumerate}
 \subsection{Protocol}
+Besides the packet format, our modified Go-Back-N has its own protocol. Firstly, for every session, the first 4 bytes of the first packet (so that it should be at least 4 bytes long) specifies the length of data to be sent in this session (not including itself). Secondly, the reply, either ACK, ACK-INIT, FIN, FINACK, should be sent by a packet whose content is exactly 1 byte long, i.e. it should only contains the flag and nothing else. For ACK-INIT the sequence number should be $-1$, for FIN the sequence number should be that of the last accepted packet's, and for FINACK the sequence number should be that of the FIN's plus one.
+
+Since data packets and reply packets are undistinguishable, that the receiver sends FIN request first is necessarily. It is possible that the FIN sent by the receiver will lost, so that the receiver may receive data packet from the sender due to timeout. The receiver identifies the FINACK reply by checking the sequence number.
 \section{Loss and error solving}
     \subsection{Packet loss solving}
-        
+        Packet loss, though technically impossible to be perfectly detected, could be partially bypassed through an ACK-based protocol, such as the Go-Back-N protocol. After sending packets, we wait for a predefined time ($500$ms for example), and if no acknowledgement from the receiver is received, we seek for resending, assuming the packets are lost.
+
+       	However, the receiver side doesn't have such measures. When an ACK it lost, it just disappeared forever. But when the sender side timeout, it will resend packets, and the ACK will also be resent. Such protocols could still go wrong, but at least it is adequate for most uses.
     \subsection{Packet error solving}
         There is a checksum in every packet sent. When received, the program checks if the checksum in the package is correct. Corrupted packets are ignored. The use of CRC-32 which is based on cyclic error-checking codes guarantees low error rate.
 
 \section{Application Layer}
 \section{Extra work}
-    %% maybe FIN is extra work?
+
+    Our reliable data transfer functions enable us to freely send data without worrying data loss or corruption. The connection termination control realized makes it possible to send data more then once. Though neither full connection management nor simultaneously transferring data is supported, the design has made it easier to use.
+
+    Besides the additional connection termination control, we have also implemented a colourful logging functions which provides (handmade) stack trace to make debugging more tolerable. See snapshots. 
 \section{Snapshots}
 \end{document}

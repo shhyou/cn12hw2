@@ -258,7 +258,7 @@ void snd(channel_t udt, pcvoid data, size_t len) {
 		pkt_t echo;
 		int closewait = 60; /* CLOSE_WAIT at most 30s, same as TCP */
 
-		if (mkpkt(echo, -1, &FINACK, 1) != 1)
+		if (mkpkt(echo, nxtseq, &FINACK, 1) != 1)
 			logger.raise("mkpkt FINACK error");
 
 		trycall(bind(&channel_t::send, &udt, &echo, echo.len + 1ul));
@@ -272,7 +272,7 @@ void snd(channel_t udt, pcvoid data, size_t len) {
 			}
 			try {
 				rcvlen = unpkt(pkt, seq, pktbuf, pktlen);
-				if (rcvlen==1 && pktbuf[0]==FINACK) {
+				if (rcvlen==1 && pktbuf[0]==FINACK && seq==nxtseq) {
 					break;
 				} else if (rcvlen==1 && pktbuf[0]==FIN) {
 					trycall(bind(&channel_t::send,&udt, &echo, echo.len + 1ul));
@@ -385,9 +385,9 @@ void* rcv(channel_t udt, size_t &len) {
 			}
 			try {
 				rcvlen = unpkt(pkt, seq, pktbuf, pktlen);
-				if (rcvlen==1 && pktbuf[0]==FINACK) {
+				if (rcvlen==1 && pktbuf[0]==FINACK && seq==expseq) {
 					logger.print("\x1b[1;36mreceived FINACK, send last FINACK\x1b[m");
-					if (mkpkt(pkt, -1, &FINACK, 1) != 1)
+					if (mkpkt(pkt, expseq, &FINACK, 1) != 1)
 						logger.raise("mkpkt FINACK error");
 					trycall(bind(&channel_t::send, &udt, &pkt, pkt.len + 1ul));
 					break;
