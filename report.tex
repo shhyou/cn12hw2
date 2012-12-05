@@ -74,28 +74,27 @@ snd            rcv
 |   /
 | <-
 \end{verbatim}
-    
     \subsubsection{Sender}
     \begin{enumerate}
-    	\item \texttt{snd}:
-        \item \texttt{rdt\_send}:
-        \item \texttt{rdt\_rcv\_ok}:
-        \item \texttt{rdt\_rcv\_broken}:
-        \item \texttt{timeout}:
-        \item \texttt{send::FIN}:
-        \item \texttt{others}:
-        \item \texttt{close\_wait::FIN}:
+    	\item \texttt{snd}: initial data stream, \texttt{base}, \texttt{nxtseq} (the window); empty socket buffer; invoke \texttt{rdt\_send}
+        \item \texttt{rdt\_send}: fill window by data until full; send packets
+        \item \texttt{rdt\_rcv\_ok}: slide the window if $\texttt{seq}$ is correct, otherwise do nothing
+        \item \texttt{rdt\_rcv\_broken}: pretending that nothing happens
+        \item \texttt{timeout}: resend packets in the window
+        \item \texttt{send::FIN}: send FINACK
+        \item \texttt{others}: ignore
+        \item \texttt{close\_wait::FIN}: send FINACK
         \item \texttt{FINACK}, \texttt{close\_wait::timeout}:
     \end{enumerate}
     \subsubsection{Receiver}
     \begin{enumerate}
-        \item \texttt{rcv}:
-        \item \texttt{rdt\_rcv\_ok}:
-        \item \texttt{rdt\_rcv\_def}:
-        \item \texttt{last}:
-        \item \texttt{timeout}:
-        \item \texttt{others}:
-        \item \texttt{FINACK}, \texttt{timeoutL}:
+        \item \texttt{rcv}: empty socket buffer; initial default reply (ACK-INIT)
+        \item \texttt{rdt\_rcv\_ok}: make new ACK reply; send reply, increase $\texttt{expseq}$ by 1. If this is the very first packet the receiver ever received, read 4 bytes stream length and initial the data stream. If this is the last packet to be received, send FIN instead and go to \texttt{last}.
+        \item \texttt{rdt\_rcv\_def}: send previously made reply
+        \item \texttt{last}: (should send FIN)
+        \item \texttt{timeout}: resend FIN
+        \item \texttt{others}: ignore; but if too many unexpected packet arrived, resend FIN.
+        \item \texttt{FINACK}, \texttt{timeoutL}: for \texttt{FINACK}, send FINACK and exit. for \texttt{timeoutL}, exit.
     \end{enumerate}
 \subsection{Protocol}
 \section{Loss and error solving}
