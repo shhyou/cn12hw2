@@ -1,5 +1,6 @@
 CXX       = g++
 CXXFLAGS  = -std=c++0x -Wall -Wshadow -Wextra
+DEBUG     =
 HEADERS   = udt.h rdt.h log.h
 OBJS      = udt.o rdt.o log.o
 TARGET    = snd rcv sender receiver
@@ -20,13 +21,14 @@ bucket_clean:
 	rm -f bucket/*
 
 %.o: %.cpp $(HEADERS)
-	$(CXX) -c -o $@ $< $(CXXFLAGS)
+	$(CXX) -c -o $@ $< $(CXXFLAGS) $(DEBUG)
 
 sender: snd.cpp $(OBJS) $(HEADERS)
-	$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS)
+	$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS) $(DEBUG)
 
 receiver: snd.cpp $(OBJS) $(HEADERS)
-	$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS)
+	$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS) $(DEBUG)
 
 %: %.cpp $(OBJS) $(HEADERS)
+	$(CXX) -o $@ $< $(OBJS) $(CXXFLAGS) $(DEBUG)
 
