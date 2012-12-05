@@ -13,7 +13,7 @@
 #include "rdt.h"
 #include "log.h"
 
-/* 240 is just a loose upper-bound, can change if needed */
+/* 1024 is just a loose upper-bound, can change if needed */
 const unsigned int filename_ubound = 1024;
 
 void send_file(const char *address, const int port, const char *pathname) {

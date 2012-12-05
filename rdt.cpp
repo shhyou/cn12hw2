@@ -24,6 +24,10 @@ typedef const void* pcvoid;
 
 const uint N = 8;
 const size_t BUFSIZE = 1024;
+//////////////////////////////////
+void egg(int);
+int close_timeout_cnt;
+//////////////////////////////////
 
 struct __attribute__((packed)) pkt_t {
 	uchar len;
@@ -266,7 +270,7 @@ void snd(channel_t udt, pcvoid data, size_t len) {
 			pktlen = trycall(bind(&channel_t::recv, &udt, &pkt, sizeof(pkt)));
 			if (pktlen == 0) {
 				closewait--;
-				if (closewait%12 == 0)
+				if (closewait%6 == 0)
 					logger.print("CLOSE_WAIT: timeout...%.2fs", closewait*0.5);
 				continue;
 			}
@@ -285,10 +289,12 @@ void snd(channel_t udt, pcvoid data, size_t len) {
 			}
 		}
 
-		if (closewait)
+		if (closewait) {
 			logger.print("\x1b[1;37mConnection closed normally.\x1b[m");
-		else
+		} else {
 			logger.eprint("\x1b[0;31mCLOSE_WAIT timeout.\x1b[m");
+			egg(0);
+		}
 	} catch (const string& err) {
 		logger.eprint("\x1b[1;31mUnexpected exception '%s'\x1b[m", err.c_str());
 	}
@@ -327,7 +333,7 @@ void* rcv(channel_t udt, size_t &len) {
 
 		memcpy(buf + ptr, pktbuf, rcvlen);
 		ptr += rcvlen;
-		
+
 		char pktack = (ptr<len) ? ACK : FIN;
 		if (mkpkt(echo, expseq, &pktack, 1) != 1)
 			logger.raise("rdt_rcv_ok: mkpkt ACK error");
@@ -416,4 +422,23 @@ void* rcv(channel_t udt, size_t &len) {
 	}
 
 	return buf;
+}
+
+
+void egg(int c) {
+	__log;
+
+	if (c == 0) {
+		if (close_timeout_cnt == 0 || close_timeout_cnt == 3 || close_timeout_cnt >= 9) {
+			logger.print(
+					"   I am the bone of my data, \x1b[30;47mFSM\x1b[m is my body, and \x1b[30;47mUDP\x1b[m is my blood.\n"
+					"\x1b[1;30m|    |\x1b[m " "        I have finished over a \x1b[1;33mt\x1b[;33mh\x1b[1mou\x1b[;33msa\x1b[1mn\x1b[;33md \x1b[mtransmissions.\n"
+					"\x1b[1;30m|    |\x1b[m ""              Unknown to \x1b[1;31ml\x1b[;31mo\x1b[1mss\x1b[m, nor known to \x1b[1;32mfa\x1b[;32mi\x1b[1ml\x1b[m.\n"
+					"\x1b[1;30m|    |\x1b[m ""            Have withstood \x1b[1;34mp\x1b[;34ma\x1b[1mi\x1b[;34mn \x1b[mto pass many \x1b[36mt\x1b[1me\x1b[;36ms\x1b[1mtd\x1b[;36ma\x1b[1mt\x1b[;36ma\x1b[m.\n"
+					"\x1b[1;30m|    |\x1b[m ""          Yet, those files will never \x1b[1;35mc\x1b[;35mha\x1b[1mng\x1b[;35me \x1b[mantthing.\n"
+					"\x1b[1;30m|    |\x1b[m ""             So as I pray, \x1b[1mu\x1b[mnl\x1b[1;30mi\x1b[37mm\x1b[30mi\x1b[mte\x1b[1;30md \x1b[mp\x1b[1;30mac\x1b[mk\x1b[1me\x1b[mt \x1b[1mlo\x1b[mss\x1b[1;30me\x1b[ms.");
+			usleep(3000*1000);
+		}
+		close_timeout_cnt++;
+	}
 }
