@@ -4,9 +4,9 @@
 \usepackage{amsfonts}
 \usepackage{amssymb}
 \usepackage{booktabs}
-\usepackage[margin=1.5cm]{geometry}
+\usepackage[margin=2.5cm]{geometry}
 
-\author{B00902031 Kevin Tsai, B00902107 Suhorng Yoooooooooooooooo}
+\author{B00902031 Kevin Tsai, B00902107 Suhorng You}
 \title{CN HW2 report}
 
 \begin{document}
@@ -14,33 +14,45 @@
 \maketitle
 
 \section{Usage}
-    ``make'' compiles two binary files: ``sender'' and ``receiver''. Start receiver at the target computer, and then execute sender to send the file. The file sent will be saved at the working directory of sender, which is normally the directory sender is in. Filename and file permissions are preserved during the transmission. If there already exists a file with the same name, the transmission will be terminated. Sender closes after the transmission.
+    ``make'' compiles two binary files: ``sender'' and ``receiver.'' Start receiver at the target computer, and then execute sender to send the file. The file sent will be saved at the working directory of sender, which is normally the directory sender is in. Filename and file permissions are preserved during the transmission. If there already exists a file with the same name, the transmission will be terminated. Sender closes after the transmission.
 
-\section{Package Format}
-    The size of every package varies from $9$ bytes to $256$ bytes. The first byte of the package equals the size of the package$ - 1$, that is, $8$ bytes $+$ the size of the content. After this byte is a $4$-byte unsigned integer sequence number followed by a $4$-byte unsigned int crc32 checksum. The rest are the actual data that we want to transfer, whose length can be from $1$ byte to $247$ bytes.
+    Command line arguments is as follows:
+\begin{verbatim}
+$ make											build targets
+$ make clean									clean targets and object files
+$ ./sender TARGET_HOSTNAME TARGET_IP FILENAME	send file
+$ ./receiver LISTEN_PORT						receive files, waiting at port LISTEN_PORT
+\end{verbatim}
+
+    The receiver continues to receive files after previous transfer has ended until a \texttt{\^{}C} is hit. Transferring multiple files simultaneously is not support, however.
+\section{Unreliable Data Transfer Layer}
+    This layer simply uses UDP to transfer data.
+\section{Reliable Data Transfer Layer}
+\subsection{Packet Format}
+    The size of packets varies from $9$ bytes to $256$ bytes. The first byte of the packet specifies the size of the following data, that is, $8$ bytes plus the length of the content. It is followed by a $4$-byte unsigned integer sequence number, and a $4$-byte unsigned int CRC-32 checksum. The rest are the actual data that we want to transfer, whose length could be from $1$ byte to $247$ bytes.
 
 \begin{center}
     \begin{tabular}{lccc}
-        Entry name & Size(bytes) & Type & Meaning\\
+        Entry Name & Size (bytes) & Interpretation \\%& Type & Meaning\\
             \hline
-        Package size & $1$ & unsigned char &  size of the package (this entry not counted)\\ 
-        Sequence number & $4$ & unsigned integer & sequence number of the package or ACK\\
-        Checksum & $4$ & unsigned integer & the crc32 checksum of the whole package when this entry is zero\\
-        Data & $1 \sim 247$ & anytype & The data that we want to transfer\\
+        packet size & $1$ &  size of the packet (exclusive of this entry)\\ 
+        sequence number & $4$ & sequence number of the packet\\
+        checksum & $4$ & the CRC-32 checksum of the whole package, with this entry treated as zero\\
+        data & $1$-$247$ & the data being transferred\\
     \end{tabular}
 \end{center}
 
-    When the package is an ACK, an ACK char is put in the data field, so the data field is never empty.
+    
+\subsection{Receiver and Sender FSM}
+\subsection{Protocol}
+\subsection{Loss and error solving}
+    \subsection{Packet loss solving}
+        Nice question, horrible solution.
+    \subsection{Packet error solving}
+        There is a checksum in every packet sent. When received, the program checks if the checksum in the package is correct. Corrupted packets are ignored. The use of CRC-32 which is based on cyclic error-checking codes guarantees low error rate.
 
-\section{Receiver and Sender FSM}
-
-\section{Loss and error solving}
-    \subsection{Package loss solving}
-        Nice question.
-    \subsection{Package error solving}
-        There is a checksum in every package sent. For every package received, the program checks if the checksum in the package is the same as calculated after transmission. If the two values differ, the package is corrupted and hence ignored.
-	
+\section{Application Layer}
 \section{Extra work}
     %% maybe FIN is extra work?
-
+\section{Snapshots}
 \end{document}
