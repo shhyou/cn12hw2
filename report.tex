@@ -54,8 +54,27 @@ $ ./receiver LISTEN_PORT						receive files, waiting at port LISTEN_PORT
     \begin{center}
         \includegraphics[scale=0.7]{fsmsnd.jpg}
         \; \; \;
-        \includegraphics[scale=0.7]{fsmrcv.jpg}
+        \includegraphics[scale=0.7]{fsmrcv.jpg}\\
+        {\small Fig.1 \; The state diagram of the sender and receiver; Go-Back-N with extended FSM}
     \end{center}
+    Figure 1 is the diagram of the sender and the receiver, respectively. The details are described below. 
+
+    Roughly speaking, when calling the sender, it first clears the buffer, sends data, and wait. If timeout, the packets in the window are resent. If received ACK, the sender slides the window to the right until \texttt{base} touches received sequence number, i.e. only those packets that haven't been ACKed are left. Both corrupted packets and out-of-range ACKs are simply ignored. If FIN, which is the same as the ACK of the last packet, is received, the sender enters termination phase to close the connection.
+
+    When calling the receiver, it waits for data to come, and accepts only the packet with sequence number equals \texttt{expseq}. If the received packet is not accepted, it simply throws it away and resend previous ACK (or ACK-INIT, is no packet ever accepted). When regarded data in the packets as a stream, the first 4 bytes specify the total length, and hence the receiver can judge when should the connection be closed. Upon the last packet is accepted, the receiver sends FIN to the sender to require the termination of the connection.
+
+    The three-way termination phase is initiated by the receiver. The receiver first send FIN to the sender and waits for FINACK. If the sender sends too many incorrect replies or the timer time-out, the receiver will resend FIN. As soon as the receiver received FINACK, it sends the last FINACK to sender and returns to the caller, regardless the FINACK is correctly sent to the sender or not. However, after 15 seconds of wait, the receiver still exits no matter FINACK  has ever been received or not. If the sender receives FINACK, the connection is the closed. If FINACK is lost, the connection still terminates after timeout (30s).
+\begin{verbatim}
+snd            rcv
+|    <---FIN---  |    FIN == last packet's ACK
+| \              |
+|  --FINACK-->  -|
+|              /
+|    --FINACK--
+|   /
+| <-
+\end{verbatim}
+    
     \subsubsection{Sender}
     \begin{enumerate}
     	\item \texttt{snd}:
@@ -81,7 +100,7 @@ $ ./receiver LISTEN_PORT						receive files, waiting at port LISTEN_PORT
 \subsection{Protocol}
 \section{Loss and error solving}
     \subsection{Packet loss solving}
-        Nice question, horrible solution.
+        
     \subsection{Packet error solving}
         There is a checksum in every packet sent. When received, the program checks if the checksum in the package is correct. Corrupted packets are ignored. The use of CRC-32 which is based on cyclic error-checking codes guarantees low error rate.
 
